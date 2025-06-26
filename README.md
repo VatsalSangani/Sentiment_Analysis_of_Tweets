@@ -79,7 +79,7 @@ All the data is mentioned in this repository. But you have to download this Glov
 
 ## DistillBERT Version
 
-I have used the same datasets to train a larger model which is "distillbert-base-uncased" which is deployed in my Hugging Face Spaces which you can 👉 [Click here to try it out](https://huggingface.co/spaces/brendvat/Sentiment_Analysis_from_Twitter_Data).
+I have used the same datasets to train a larger model that is "distillbert-base-uncased" which is deployed in my Hugging Face Spaces and you can 👉 [Click here to try it out](https://huggingface.co/spaces/brendvat/Sentiment_Analysis_from_Twitter_Data).
 
 This model gave me better results which is displayed in README.md File in HF Space.
 So try it out.
