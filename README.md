@@ -74,3 +74,13 @@ To set up the project locally:
 ## Dataset
 
 All the data is mentioned in this repository. But you have to download this Glove Word Embedding I am mentioning the steps to do it Download the GloVe word embeddings and map each word in the dataset into its pre-trained GloVe word embedding. First go to "https://nlp.stanford.edu/projects/glove/" and download the pre-trained embeddings from 2014 English Wikipedia into the "data" directory. It's a 822MB zip file named glove.6B.zip, containing 100-dimensional embedding vectors for 400,000 words (or non-word tokens). Un-zip it. Parse the unzipped file (it's a txt file) to build an index mapping words (as strings) to their vector representation (as number vectors). Build an embedding matrix that will be loaded into an Embedding layer later. It must be a matrix of shape (max_words, embedding_dim), where each entry i contains the embedding_dimdimensional vector for the word of index i in our reference word index (built during tokenization). Note that the index 0 is not supposed to stand for any word or token -- it's a placeholder.
+
+---
+
+## DistillBERT Version
+
+I have used the same datasets to train a larger model which is "distillbert-base-uncased" which is deployed in my Hugging Face Spaces which you can 👉 [Click here to try it out](https://huggingface.co/spaces/brendvat/Sentiment_Analysis_from_Twitter_Data).
+
+This model gave me better results which is displayed in README.md File in HF Space.
+So try it out.
+
