@@ -1,8 +1,8 @@
-# Sentiment Analysis of Tweets
+# Credit Risk Modelling
 
 ## Description
 
-This project implements a machine learning and deep learning solution for classifying tweets as positive, negative, or neutral. By leveraging neural networks and GloVe word embeddings, the model analyzes tweet text to determine sentiment, providing valuable insights into public opinion on various topics.
+This project focuses on building a predictive model to assess the credit risk associated with loan applicants. By analyzing various features of applicants, the model aims to classify the likelihood of default, thereby assisting financial institutions in making informed lending decisions.
 
 ---
 
@@ -10,12 +10,11 @@ This project implements a machine learning and deep learning solution for classi
 
 - **Programming Language**: Python
 - **Libraries/Frameworks**:
-  - TensorFlow
-  - Keras
-  - NLTK
-  - NumPy
   - Pandas
+  - NumPy
   - Scikit-learn
+  - Matplotlib
+  - Seaborn
 - **Tools**: Jupyter Notebook
 
 ---
@@ -24,43 +23,46 @@ This project implements a machine learning and deep learning solution for classi
 
 ### 1. Data Collection
 
-- **Datasets**: The repository includes several datasets:
-  - `twitter-training-data.txt`
-  - `twitter-dev-data.txt`
-  - `twitter-test1.txt`
-  - `twitter-test2.txt`
-  - `twitter-test3.txt`
+- **Dataset**: The project utilizes the `credit_risk_dataset.csv`, which contains information on loan applicants, including features such as age, income, loan amount, and credit history.
 
 ### 2. Data Preprocessing
 
-- **Text Cleaning**: Removal of special characters, URLs, and unnecessary whitespace.
-- **Tokenization**: Splitting text into individual words.
-- **Lemmatization**: Reducing words to their base forms.
-- **Stop Words Removal**: Eliminating common words that do not contribute to sentiment.
+- **Handling Missing Values**: Identified and addressed missing data to ensure model accuracy.
+- **Encoding Categorical Variables**: Converted categorical features into numerical representations suitable for modeling.
+- **Feature Scaling**: Standardized numerical features to improve model performance.
 
-### 3. Feature Extraction
+### 3. Exploratory Data Analysis (EDA)
 
-- **Word Embeddings**: Utilization of GloVe embeddings to represent words as vectors. Ensure to download the GloVe embeddings as described in the [Installation](#installation) section.
+- **Visualization**: Created plots to understand the distribution of features and the relationship between variables.
+- **Correlation Analysis**: Assessed correlations between features to identify potential multicollinearity.
 
 ### 4. Model Building
 
-- **Neural Network Architecture**: Construction of a sequential model with embedding, LSTM, and dense layers for sentiment classification.
+- **Algorithm Selection**: Implemented machine learning algorithms, including Logistic Regression and Decision Trees, to predict credit risk.
+- **Model Training**: Trained models using the processed dataset.
+- **Hyperparameter Tuning**: Optimized model parameters to enhance predictive performance.
 
-### 5. Model Training and Evaluation
+### 5. Model Evaluation
 
-- **Training**: Model trained on the preprocessed training dataset.
-- **Evaluation**: Performance assessed using accuracy, precision, recall, and F1-score metrics.
+- **Performance Metrics**: Evaluated models using metrics such as accuracy, precision, recall, F1-score, and ROC-AUC.
+- **Validation**: Performed cross-validation to ensure model robustness.
 
 ---
 
 ## Features
 
-- **Comprehensive Data Preprocessing Pipeline**: From raw text to clean, tokenized inputs.
-- **Integration of Pre-trained Word Embeddings**: Enhancing model understanding of semantic relationships.
-- **Neural Network Implementation**: Employing LSTM layers for sequence processing.
-- **Performance Evaluation**: Detailed metrics to assess model effectiveness.
+- **Comprehensive Data Preprocessing Pipeline**: From raw data to clean, analyzable inputs.
+- **Exploratory Data Analysis**: In-depth analysis to uncover insights and inform modeling decisions.
+- **Predictive Modeling**: Implementation of classification algorithms to assess credit risk.
+- **Model Evaluation**: Detailed assessment of model performance using various metrics.
 
 ---
+
+## Model Comparison Results
+![Alt Text](https://github.com/VatsalSangani/Credit_Risk_Modelling/blob/main/.archive/Model%20Comparison%20Results.png)
+
+## Deployment on EC2 Instance 
+[Click here to test the new deployed model](http://13.42.17.17:8501/)
 
 ## Installation
 
@@ -68,19 +70,4 @@ To set up the project locally:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/VatsalSangani/Sentiment_Analysis_of_Tweets.git
-
-
-## Dataset
-
-All the data is mentioned in this repository. But you have to download this Glove Word Embedding I am mentioning the steps to do it Download the GloVe word embeddings and map each word in the dataset into its pre-trained GloVe word embedding. First go to "https://nlp.stanford.edu/projects/glove/" and download the pre-trained embeddings from 2014 English Wikipedia into the "data" directory. It's a 822MB zip file named glove.6B.zip, containing 100-dimensional embedding vectors for 400,000 words (or non-word tokens). Un-zip it. Parse the unzipped file (it's a txt file) to build an index mapping words (as strings) to their vector representation (as number vectors). Build an embedding matrix that will be loaded into an Embedding layer later. It must be a matrix of shape (max_words, embedding_dim), where each entry i contains the embedding_dimdimensional vector for the word of index i in our reference word index (built during tokenization). Note that the index 0 is not supposed to stand for any word or token -- it's a placeholder.
-
----
-
-## DistillBERT Version
-
-I have used the same datasets to train a larger model that is "distillbert-base-uncased" which is deployed in my Hugging Face Spaces and you can 👉 [Click here to try it out](https://huggingface.co/spaces/brendvat/Sentiment_Analysis_from_Twitter_Data).
-
-This model gave me better results which is displayed in README.md File in HF Space.
-So try it out.
-
+   git clone https://github.com/VatsalSangani/Credit_Risk_Modelling.git
