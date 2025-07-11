@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentiment-app
+  template:
+    metadata:
+      labels:
+        app: sentiment-app
+    spec:
+      containers:
+        - name: sentiment-app
+          image: twitter-sentiment-ui:latest
+          ports:
+            - containerPort: 8001
+            - containerPort: 8502
