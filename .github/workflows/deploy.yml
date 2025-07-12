@@ -21,7 +21,7 @@ jobs:
     - name: 🚀 Deploy to EC2
       run: |
         ssh -tt -o StrictHostKeyChecking=no deploy@13.42.17.17 << 'EOF'
-          cd ~/Sentiment_Analysis_of_Tweets  # Ensure this matches your EC2 path
+          cd ~/Sentiment_Analysis_of_Tweets/sentiment-analysis  # Ensure this matches your EC2 path
 
           git pull origin main
           
