@@ -36,7 +36,7 @@ jobs:
           docker build -t sentiment-ui:latest .
 
           echo "🚀 Running new Docker container..."
-          docker run -d -p 8001:8000 -p 8502:8501 --name sentiment-app sentiment-ui:latest
+          docker run -d -p 8001:8001 -p 8502:8502 --name sentiment-app sentiment-ui:latest
 
           exit 0
         EOF
