@@ -31,6 +31,9 @@ jobs:
           
           echo "🧹 Removing previous Docker image..."
           docker rmi -f sentiment-ui:latest 2>/dev/null || true
+
+          echo "Clearing only build cache..."
+          docker builder prune -f
           
           echo "📦 Building new Docker image..."
           docker build --no-cache -t sentiment-ui:latest .
