@@ -19,7 +19,8 @@ EXPOSE 8001
 EXPOSE 8502
 
 # Start both servers
-CMD exec sh -c "\
+CMD ["bash", "-c", "\
   uvicorn app.main:app --host 0.0.0.0 --port 8001 & \
-  streamlit run app/app.py --server.port 8502 --server.address 0.0.0.0"
+  streamlit run app/app.py --server.port 8502 --server.address 0.0.0.0 & \
+  wait"]
 
