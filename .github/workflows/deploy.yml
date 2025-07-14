@@ -18,29 +18,37 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-    - name: 🚀 Deploy to EC2
+    - name: 🚀 Deploy Sentiment App to EC2
       run: |
         ssh -tt -o StrictHostKeyChecking=no deploy@13.42.17.17 << 'EOF'
-          cd ~/Sentiment_Analysis_of_Tweets/sentiment-analysis  # Ensure this matches your EC2 path
-
-          git pull origin main
+          set -e
           
-          echo "🧹 Stopping and removing previous sentiment-analysis container..."
+          echo "📁 Changing to sentiment-analysis directory..."
+          cd ~/Sentiment_Analysis_of_Tweets/sentiment-analysis
+
+          echo "📥 Pulling latest code..."
+          git pull origin main
+
+          echo "🛑 Stopping old container..."
           docker stop sentiment-app 2>/dev/null || true
           docker rm sentiment-app 2>/dev/null || true
-          
-          echo "🧹 Removing previous Docker image..."
+
+          echo "🧼 Cleaning Docker build cache..."
+          docker builder prune -f
+
+          echo "🔥 Removing old sentiment-ui image..."
           docker rmi -f sentiment-ui:latest 2>/dev/null || true
 
-          echo "Clearing only build cache..."
-          docker builder prune -f
-          
-          echo "📦 Building new Docker image..."
+          echo "🐳 Building Docker image fresh..."
           docker build --no-cache -t sentiment-ui:latest .
 
-          echo "🚀 Running new Docker container..."
-          docker run -d -p 8001:8001 -p 8502:8502 --name sentiment-app sentiment-ui:latest
+          echo "🚀 Running new container on ports 8001 (API) and 8502 (Streamlit)..."
+          docker run -d \
+            -p 8001:8001 \
+            -p 8502:8502 \
+            --name sentiment-app \
+            sentiment-ui:latest
 
+          echo "✅ Deployment complete."
           exit 0
         EOF
-
