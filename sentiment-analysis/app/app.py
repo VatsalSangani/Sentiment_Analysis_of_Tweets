@@ -1,36 +1,70 @@
-import streamlit as st
-import requests
+"""
+main.py  –  FastAPI backend for Twitter-Sentiment project
+---------------------------------------------------------
+• Loads a fine-tuned DistilBERT model from Hugging Face Hub
+• Exposes two endpoints:
+    GET  /           → simple health-check
+    POST /predict    → JSON { "text": "<tweet>" } → sentiment + confidence
+"""
 
-# ────────────────────────────────────────────────────────────────────────────────
-# Streamlit Config
-# ────────────────────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Tweet Sentiment Analyzer", layout="centered")
-st.title("💬 Twitter Sentiment Analyzer")
-st.markdown("Predicts sentiment using a fine-tuned DistilBERT model served by FastAPI.")
+from typing import Literal
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+import torch.nn.functional as F
 
-# ────────────────────────────────────────────────────────────────────────────────
-# Input Form
-# ────────────────────────────────────────────────────────────────────────────────
-with st.form("tweet_form"):
-    tweet = st.text_area("Enter a tweet 👇", height=150)
-    submitted = st.form_submit_button("Analyze")
+# ------------------------------------------------------------------#
+# 1. Load model & tokenizer from Hugging Face
+# ------------------------------------------------------------------#
+MODEL_HF_PATH = "brendvat/distilbert-ft"  # 🛑 Replace this with actual path
 
-# ────────────────────────────────────────────────────────────────────────────────
-# API Call and Response Display
-# ────────────────────────────────────────────────────────────────────────────────
-if submitted:
-    if not tweet.strip():
-        st.warning("Please enter a tweet.")
-    else:
-        try:
-            with st.spinner("Scoring…"):
-                res = requests.post("http://127.0.0.1:8001/predict", json={"text": tweet}, timeout=10)
-            res.raise_for_status()
-            output = res.json()
+tokenizer = AutoTokenizer.from_pretrained(MODEL_HF_PATH)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_HF_PATH)
 
-            st.success(f"**Sentiment:** {output['sentiment'].capitalize()}")
-            st.metric(label="Confidence", value=f"{output['confidence']*100:.2f}%")
+label_map: dict[int, Literal["negative", "neutral", "positive"]] = {
+    0: "negative",
+    1: "neutral",
+    2: "positive",
+}
 
-        except Exception as e:
-            st.error(f"API error: {e}")
-            st.json({"text": tweet})  # For debugging
+# ------------------------------------------------------------------#
+# 2. FastAPI setup
+# ------------------------------------------------------------------#
+app = FastAPI(title="Tweet Sentiment API", version="1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow Streamlit or browser to call
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class TweetIn(BaseModel):
+    text: str
+
+class PredictionOut(BaseModel):
+    sentiment: Literal["negative", "neutral", "positive"]
+    confidence: float
+
+@app.get("/", summary="Health-check")
+def root() -> dict[str, str]:
+    return {"status": "ok"}
+
+@app.post("/predict", response_model=PredictionOut, summary="Predict sentiment")
+def predict_sentiment(tweet: TweetIn):
+    if not tweet.text.strip():
+        raise HTTPException(status_code=400, detail="Input text is empty.")
+
+    inputs = tokenizer(tweet.text, return_tensors="pt", truncation=True, padding=True)
+    with torch.no_grad():
+        logits = model(**inputs).logits
+        probs = F.softmax(logits, dim=1)[0]
+        pred_idx = int(torch.argmax(probs).item())
+        confidence = float(probs[pred_idx])
+
+    return {
+        "sentiment": label_map[pred_idx],
+        "confidence": round(confidence, 4),
+    }

@@ -12,7 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy your application and model files
 COPY app ./app
-COPY distilbert-ft ./distilbert-ft/
 
 # Expose Streamlit and FastAPI ports
 EXPOSE 8001
