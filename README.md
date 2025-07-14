@@ -1,73 +1,102 @@
-# Credit Risk Modelling
+# 🧠 Sentiment Analysis of Tweets
 
-## Description
-
-This project focuses on building a predictive model to assess the credit risk associated with loan applicants. By analyzing various features of applicants, the model aims to classify the likelihood of default, thereby assisting financial institutions in making informed lending decisions.
+This project is an end-to-end application that analyzes the sentiment of tweets using a fine-tuned DistilBERT transformer model. It includes a FastAPI backend for inference and a Streamlit frontend for user interaction, deployed seamlessly via a CI/CD pipeline on an AWS EC2 instance.
 
 ---
 
-## Technologies Used
+## 🚀 Live App
 
-- **Programming Language**: Python
-- **Libraries/Frameworks**:
-  - Pandas
-  - NumPy
-  - Scikit-learn
-  - Matplotlib
-  - Seaborn
-- **Tools**: Jupyter Notebook
+👉 [Click to Open the Deployed App](http://13.42.17.17:8502)
 
 ---
 
-## Project Workflow
+## 🛠️ Tech Stack
 
-### 1. Data Collection
-
-- **Dataset**: The project utilizes the `credit_risk_dataset.csv`, which contains information on loan applicants, including features such as age, income, loan amount, and credit history.
-
-### 2. Data Preprocessing
-
-- **Handling Missing Values**: Identified and addressed missing data to ensure model accuracy.
-- **Encoding Categorical Variables**: Converted categorical features into numerical representations suitable for modeling.
-- **Feature Scaling**: Standardized numerical features to improve model performance.
-
-### 3. Exploratory Data Analysis (EDA)
-
-- **Visualization**: Created plots to understand the distribution of features and the relationship between variables.
-- **Correlation Analysis**: Assessed correlations between features to identify potential multicollinearity.
-
-### 4. Model Building
-
-- **Algorithm Selection**: Implemented machine learning algorithms, including Logistic Regression and Decision Trees, to predict credit risk.
-- **Model Training**: Trained models using the processed dataset.
-- **Hyperparameter Tuning**: Optimized model parameters to enhance predictive performance.
-
-### 5. Model Evaluation
-
-- **Performance Metrics**: Evaluated models using metrics such as accuracy, precision, recall, F1-score, and ROC-AUC.
-- **Validation**: Performed cross-validation to ensure model robustness.
+- **NLP Model**: DistilBERT (fine-tuned for sentiment classification)
+- **Backend**: FastAPI
+- **Frontend**: Streamlit
+- **Deployment**: Docker, GitHub Actions, AWS EC2
+- **Model Hosting**: Hugging Face Hub
 
 ---
 
-## Features
+## ✨ Features
 
-- **Comprehensive Data Preprocessing Pipeline**: From raw data to clean, analyzable inputs.
-- **Exploratory Data Analysis**: In-depth analysis to uncover insights and inform modeling decisions.
-- **Predictive Modeling**: Implementation of classification algorithms to assess credit risk.
-- **Model Evaluation**: Detailed assessment of model performance using various metrics.
+- Analyze sentiment (`positive`, `neutral`, `negative`) of any tweet or sentence.
+- Live confidence score using a fine-tuned transformer.
+- Real-time interactive frontend using Streamlit.
+- Auto-deploys to EC2 via GitHub Actions on every `main` branch push.
 
 ---
 
-## Model Comparison Results
-![Alt Text](https://github.com/VatsalSangani/Credit_Risk_Modelling/blob/main/.archive/Model%20Comparison%20Results.png)
+## 📊 Model
 
-## Deployment on EC2 Instance 
-[Click here to test the new deployed model](http://13.42.17.17:8501/)
+- **Base**: `distilbert-base-uncased`
+- **Trained On**: Custom Twitter sentiment dataset.
+- **Hosted At**: [Hugging Face Hub](https://huggingface.co/brendvat/distilbert-ft)
 
-## Installation
+---
 
-To set up the project locally:
+## ⚙️ CI/CD Pipeline – EC2 Auto Deployment
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/VatsalSangani/Credit_Risk_Modelling.git
+This project uses **GitHub Actions** to automatically build and deploy the app to an AWS EC2 instance whenever changes are pushed to the `main` branch.
+
+### 🔁 How It Works:
+
+1. **Code pushed to GitHub** → triggers GitHub Actions
+2. **SSH into EC2** via `EC2_SSH_KEY` (GitHub secret)
+3. **Pull latest code**, stop old container, remove old image
+4. **Build new Docker image** and run fresh container on EC2
+
+### ✅ Workflow File: `.github/workflows/deploy.yml`
+
+```yaml
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: ⬇️ Checkout code
+      uses: actions/checkout@v3
+
+    - name: 🔐 Set up SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: 🚀 Deploy Sentiment App to EC2
+      run: |
+        ssh -tt -o StrictHostKeyChecking=no deploy@<YOUR_EC2_PUBLIC_IP> << 'EOF'
+          set -e
+          cd ~/Sentiment_Analysis_of_Tweets/sentiment-analysis
+          git pull origin main
+          docker stop sentiment-app || true
+          docker rm sentiment-app || true
+          docker rmi -f sentiment-ui:latest || true
+          docker build --no-cache -t sentiment-ui:latest .
+          docker run -d -p 8001:8001 -p 8502:8502 --name sentiment-app sentiment-ui:latest
+          exit 0
+        EOF
+```
+---
+
+## 🐳 Docker Commands (For Local Testing)
+```
+# Build Docker Image
+docker build -t sentiment-ui:latest .
+
+# Run Container
+docker run -d -p 8001:8001 -p 8502:8502 --name sentiment-app sentiment-ui:latest
+```
+
+## 📥 Installation (Run Locally)
+```
+git clone https://github.com/VatsalSangani/Sentiment_Analysis_of_Tweets.git
+cd Sentiment_Analysis_of_Tweets/sentiment-analysis
+pip install -r requirements.txt
+streamlit run app/app.py
+```
