@@ -1,0 +1,45 @@
+- name: 🚀 Deploy Twitter Sentiment App
+  hosts: ec2
+  become: yes
+
+  tasks:
+    - name: Ensure git is installed
+      yum:
+        name: git
+        state: present
+
+    - name: Pull latest code from GitHub
+      git:
+        repo: https://github.com/VatsalSangani/Sentiment_Analysis_of_Tweets.git
+        dest: /home/deploy/Sentiment_Analysis_of_Tweets
+        force: yes
+
+    - name: Stop and remove old container
+      shell: |
+        docker stop sentiment-app || true
+        docker rm sentiment-app || true
+      args:
+        executable: /bin/bash
+
+    - name: Prune Docker build cache
+      shell: docker builder prune -f
+      args:
+        executable: /bin/bash
+
+    - name: Remove old Docker image
+      shell: docker rmi -f sentiment-ui:latest || true
+      args:
+        executable: /bin/bash
+
+    - name: Build fresh Docker image
+      shell: |
+        cd /home/deploy/Sentiment_Analysis_of_Tweets/sentiment-analysis
+        docker build --no-cache -t sentiment-ui:latest .
+      args:
+        executable: /bin/bash
+
+    - name: Run new container
+      shell: |
+        docker run -d -p 8001:8001 -p 8502:8502 --name sentiment-app sentiment-ui:latest
+      args:
+        executable: /bin/bash
