@@ -93,6 +93,7 @@ docker build -t sentiment-ui:latest .
 docker run -d -p 8001:8001 -p 8502:8502 --name sentiment-app sentiment-ui:latest
 ```
 
+
 ## 📥 Installation (Run Locally)
 ```
 git clone https://github.com/VatsalSangani/Sentiment_Analysis_of_Tweets.git
