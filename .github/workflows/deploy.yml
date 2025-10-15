@@ -42,7 +42,7 @@ jobs:
           echo "🐳 Building Docker image fresh..."
           docker build --no-cache -t sentiment-ui:latest .
 
-          echo "🚀 Running new container on ports 8001 (API) and 8502 (Streamlit)..."
+          echo "🚀 Running new container on ports 8001 (API) and 8502 (Streamlit Frontend)..."
           docker run -d \
             -p 8001:8001 \
             -p 8502:8502 \
