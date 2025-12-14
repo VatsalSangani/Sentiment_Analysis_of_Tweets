@@ -1,6 +1,6 @@
 # 🧠 Sentiment Analysis of Tweets
 
-This project is an end-to-end application that analyzes the sentiment of tweets using a fine-tuned DistilBERT transformer model. It includes a FastAPI backend for inference and a Streamlit frontend for user interaction, deployed seamlessly via a CI/CD pipeline on an AWS EC2 instance.
+This project is an end-to-end application that analyzes the sentiment of tweets using a fine-tuned DistilBERT transformer model. It includes a FastAPI backend for inference and a Streamlit frontend for user interaction, deployed seamlessly via a CI/CD pipeline on an AWS EC2 instance..
 
 ---
 
