@@ -1,54 +1,91 @@
-name: 🚀 Deploy Twitter Sentiment App to EC2
+name: Deploy Sentiment Analysis to EC2 via AWS SSM
 
+# Trigger on push to main branch
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  workflow_dispatch:
 
+# Grant permissions for pushing to GitHub Container Registry (GHCR)
+permissions:
+  contents: read
+  packages: write
+  
 jobs:
-  deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
-
+    
+    # Define environment variables
+    env:
+      REGISTRY: ghcr.io
+      
+      # --- APP: Sentiment Analysis ---
+      SA_IMAGE_NAME: vatsalsangani/sentiment_analysis
+      SA_IMAGE_PATH: ./sentiment-analysis 
+      SA_FASTAPI_EXTERNAL_PORT: 8002  # New external port for FastAPI
+      SA_FASTAPI_INTERNAL_PORT: 8001  # Internal port defined in Dockerfile/entrypoint.sh
+      SA_STREAMLIT_EXTERNAL_PORT: 8503 # New external port for Streamlit
+      SA_STREAMLIT_INTERNAL_PORT: 8502 # Internal port defined in Dockerfile/entrypoint.sh
+      
     steps:
-    - name: ⬇️ Checkout code
-      uses: actions/checkout@v3
+      
+      # 1. Checkout repository code (The Sentiment Analysis Repo)
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: 🔐 Set up SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-
-    - name: 🚀 Deploy Sentiment App to EC2
-      run: |
-        ssh -tt -o StrictHostKeyChecking=no deploy@13.42.17.17 << 'EOF'
-          set -e
+      # 2-4. Docker Setup and Login
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           
-          echo "📁 Changing to sentiment-analysis directory..."
-          cd ~/Sentiment_Analysis_of_Tweets/sentiment-analysis
+      # --- AWS SSM Credential Setup ---
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-          echo "📥 Pulling latest code..."
-          git pull origin main
 
-          echo "🛑 Stopping old container..."
-          docker stop sentiment-app 2>/dev/null || true
-          docker rm sentiment-app 2>/dev/null || true
+      # ----------------------------------------------------------------------------------
+      # APP: SENTIMENT ANALYSIS DEPLOYMENT
+      # ----------------------------------------------------------------------------------
+      
+      # 5. Build and Push the Sentiment Analysis Docker image
+      - name: Build and push Sentiment Analysis image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.SA_IMAGE_PATH }}
+          file: ${{ env.SA_IMAGE_PATH }}/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.SA_IMAGE_NAME }}:latest
 
-          echo "🧼 Cleaning Docker build cache..."
-          docker builder prune -f
+      # 6. Deploy Sentiment Analysis via AWS CLI SSM Command
+      - name: Deploy Sentiment Analysis App
+        run: |
+          DEPLOY_SCRIPT="#!/bin/bash\n \
+          echo ${{ secrets.GITHUB_TOKEN }} | /usr/bin/docker login ghcr.io -u VatsalSangani --password-stdin\n \
+          IMAGE_URI=\"${{ env.REGISTRY }}/${{ env.SA_IMAGE_NAME }}:latest\"\n \
+          /usr/bin/docker pull \$IMAGE_URI\n \
+          /usr/bin/docker stop sentiment-app || true\n \
+          /usr/bin/docker rm sentiment-app || true\n \
+          # Maps EXTERNAL 8002 to INTERNAL 8001 (FastAPI) AND EXTERNAL 8503 to INTERNAL 8502 (Streamlit)
+          /usr/bin/docker run -d --name sentiment-app \
+            -p ${{ env.SA_FASTAPI_EXTERNAL_PORT }}:${{ env.SA_FASTAPI_INTERNAL_PORT }} \
+            -p ${{ env.SA_STREAMLIT_EXTERNAL_PORT }}:${{ env.SA_STREAMLIT_INTERNAL_PORT }} \
+            --restart unless-stopped \$IMAGE_URI"
 
-          echo "🔥 Removing old sentiment-ui image..."
-          docker rmi -f sentiment-ui:latest 2>/dev/null || true
-
-          echo "🐳 Building Docker image fresh..."
-          docker build --no-cache -t sentiment-ui:latest .
-
-          echo "🚀 Running new container on ports 8001 (API) and 8502 (Streamlit Frontend)..."
-          docker run -d \
-            -p 8001:8001 \
-            -p 8502:8502 \
-            --name sentiment-app \
-            sentiment-ui:latest
-
-          echo "✅ Deployment complete."
-          exit 0
-        EOF
+          aws ssm send-command \
+            --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
+            --document-name "AWS-RunShellScript" \
+            --comment "GitHub Actions Deployment - Sentiment Analysis" \
+            --parameters "commands=['$DEPLOY_SCRIPT'],workingDirectory=['/home/ec2-user']" \
+            --timeout-seconds 1200 \
+            --output text
