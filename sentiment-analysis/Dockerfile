@@ -13,13 +13,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your application and model files
 COPY app ./app
 
+# Copy the entrypoint script and make it executable
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Expose Streamlit and FastAPI ports
 EXPOSE 8001
 EXPOSE 8502
 
-# Start both servers
-CMD ["bash", "-c", "\
-  uvicorn app.main:app --host 0.0.0.0 --port 8001 & \
-  streamlit run app/app.py --server.port 8502 --server.address 0.0.0.0 & \
-  wait"]
-
+# Use the script as the entry point
+ENTRYPOINT ["./entrypoint.sh"]
