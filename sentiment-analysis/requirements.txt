@@ -1,22 +1,18 @@
-# 1. TELL PIP WHERE TO FIND CPU VERSIONS
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# 2. CORE DEPENDENCIES
 fastapi
 uvicorn[standard]
-
-# 3. ML LIBRARIES (Fixed for compatibility)
-# Transformers 4.35+ is REQUIRED to fix the 'register_pytree_node' crash with Torch 2.1
-transformers>=4.37.0
+# transformers>=4.39.0
 datasets
-accelerate>=0.27.0
-
-# 4. TORCH (CPU VERSION)
-torch==2.1.0+cpu
-
-# 5. DATA & UI
+# Update accelerate to match the new transformers/torch
+# accelerate>=0.28.0
+# torch==2.1.0+cpu
 numpy<2.0
 pandas
 scikit-learn
 emoji
 streamlit
+requests
+torch==2.2.0+cpu
+transformers==4.49.0
+accelerate>=0.29.0
