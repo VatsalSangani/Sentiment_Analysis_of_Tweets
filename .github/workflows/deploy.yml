@@ -1,12 +1,10 @@
-name: Deploy Sentiment Analysis to EC2 via AWS SSM
+name: Deploy Sentiment Analysis to EC2
 
-# Trigger on push to main branch
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Grant permissions for pushing to GitHub Container Registry (GHCR)
 permissions:
   contents: read
   packages: write
@@ -15,29 +13,31 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     
-    # Define environment variables
+    # --- CONFIGURATION SECTION ---
     env:
       REGISTRY: ghcr.io
-      
-      # --- APP: Sentiment Analysis ---
-      SA_IMAGE_NAME: vatsalsangani/sentiment_analysis
-      SA_IMAGE_PATH: ./sentiment-analysis 
-      SA_FASTAPI_EXTERNAL_PORT: 8002  # New external port for FastAPI
-      SA_FASTAPI_INTERNAL_PORT: 8001  # Internal port defined in Dockerfile/entrypoint.sh
-      SA_STREAMLIT_EXTERNAL_PORT: 8503 # New external port for Streamlit
-      SA_STREAMLIT_INTERNAL_PORT: 8502 # Internal port defined in Dockerfile/entrypoint.sh
+      # UPDATED: Lowercase, matches your likely repo name or preference
+      IMAGE_NAME: vatsalsangani/sentiment-analysis 
+      CONTAINER_NAME: sentiment-app
+      # UPDATED: Matches your screenshot folder name exactly
+      BUILD_CONTEXT: ./sentiment-analysis 
+      DOCKERFILE_PATH: ./sentiment-analysis/Dockerfile
       
     steps:
       
-      # 1. Checkout repository code (The Sentiment Analysis Repo)
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2-4. Docker Setup and Login
+      # 2. Set up QEMU
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+      
+      # 3. Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # 4. Log in to GHCR
       - name: Log in to the Container Registry
         uses: docker/login-action@v3
         with:
@@ -45,7 +45,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      # --- AWS SSM Credential Setup ---
+      # 5. Build and Push (No Cache - Ensuring Fresh Build)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.BUILD_CONTEXT }}
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          no-cache: true 
+          
+      # 6. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -53,39 +63,51 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-
-      # ----------------------------------------------------------------------------------
-      # APP: SENTIMENT ANALYSIS DEPLOYMENT
-      # ----------------------------------------------------------------------------------
-      
-      # 5. Build and Push the Sentiment Analysis Docker image
-      - name: Build and push Sentiment Analysis image
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ env.SA_IMAGE_PATH }}
-          file: ${{ env.SA_IMAGE_PATH }}/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.SA_IMAGE_NAME }}:latest
-
-      # 6. Deploy Sentiment Analysis via AWS CLI SSM Command
-      - name: Deploy Sentiment Analysis App
+      # 7. Deploy via AWS SSM (The "Winning Formula" - JSON Safe)
+      - name: Deploy Docker via AWS CLI SSM Command
         run: |
-          DEPLOY_SCRIPT="#!/bin/bash\n \
-          echo ${{ secrets.GITHUB_TOKEN }} | /usr/bin/docker login ghcr.io -u VatsalSangani --password-stdin\n \
-          IMAGE_URI=\"${{ env.REGISTRY }}/${{ env.SA_IMAGE_NAME }}:latest\"\n \
-          /usr/bin/docker pull \$IMAGE_URI\n \
-          /usr/bin/docker stop sentiment-app || true\n \
-          /usr/bin/docker rm sentiment-app || true\n \
-          # Maps EXTERNAL 8002 to INTERNAL 8001 (FastAPI) AND EXTERNAL 8503 to INTERNAL 8502 (Streamlit)
-          /usr/bin/docker run -d --name sentiment-app \
-            -p ${{ env.SA_FASTAPI_EXTERNAL_PORT }}:${{ env.SA_FASTAPI_INTERNAL_PORT }} \
-            -p ${{ env.SA_STREAMLIT_EXTERNAL_PORT }}:${{ env.SA_STREAMLIT_INTERNAL_PORT }} \
-            --restart unless-stopped \$IMAGE_URI"
+          # --- 1. PREPARE SCRIPT CONTENT ---
+          # We use cat <<EOF to let GitHub expand variables safely.
+          
+          cat <<EOF > deploy_script.sh
+          #!/bin/bash
+          set -e
 
+          # Log in to GHCR
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          # 1. Clean Up: Force remove specific container
+          sudo docker rm -fv ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+
+          # 2. Clean Up: Remove image to ensure fresh pull
+          sudo docker rmi -f ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>/dev/null || true
+
+          # 3. Pull new image
+          sudo docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+          # 4. Run new container
+          # MAPPING PORTS: Host 8001->Container 8001 AND Host 8502->Container 8502
+          # This avoids conflict with your other app running on 8000/8501
+          sudo docker run -d \
+            --name ${{ env.CONTAINER_NAME }} \
+            -p 8001:8001 \
+            -p 8502:8502 \
+            --restart unless-stopped \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          EOF
+
+          # --- 2. GENERATE SAFE JSON PAYLOAD ---
+          # jq guarantees perfect JSON syntax for AWS CLI
+          PARAMETERS=$(jq -n \
+            --arg cmd "$(cat deploy_script.sh)" \
+            --arg dir "/home/ec2-user" \
+            '{"commands": [$cmd], "workingDirectory": [$dir]}')
+
+          # --- 3. SEND COMMAND ---
           aws ssm send-command \
-            --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "GitHub Actions Deployment - Sentiment Analysis" \
-            --parameters "commands=['$DEPLOY_SCRIPT'],workingDirectory=['/home/ec2-user']" \
+            --comment "Sentiment App Deployment" \
+            --parameters "$PARAMETERS" \
             --timeout-seconds 1200 \
             --output text
