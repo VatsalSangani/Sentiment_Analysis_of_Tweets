@@ -6,7 +6,7 @@ This project is an end-to-end application that analyzes the sentiment of tweets 
 
 ## 🚀 Live App
 
-👉 [Click to Open the Deployed App](http://13.42.17.17:8502)
+👉 [Click to Open the Deployed App](http://18.171.75.241:8502)
 
 ---
 
